@@ -55,7 +55,7 @@ dms ipc typingSounds disable
 
 ## Credits
 
-- Sound packs are bundled from [Mechvibes](https://github.com/haxiboy/mechvibes).
+- Sound packs are bundled from [Mechvibes](https://github.com/hainguyents13/mechvibes).
 
 ## License
 MIT
