@@ -28,7 +28,7 @@ git clone https://github.com/hthienloc/dms-typing-sounds ~/.config/DankMaterialS
 
 ## Features
 - **Global Keystroke Audio** - Play mechanical keyboard clicks as you type.
-- **Low Latency** - Native C++ playback with sub-millisecond latency.
+- **Low Latency** - Qt6 SoundEffect playback with sub-millisecond latency.
 - **Sound Pack Selection** - Supports Mechvibes sound packs.
 
 ## Usage
@@ -46,5 +46,13 @@ dms ipc typingSounds enable
 dms ipc typingSounds disable
 ```
 
+## Roadmap / TODO
+
+- [ ] Add support for custom sound pack directory configuration.
+- [ ] Implement volume/pitch randomization per keystroke for organic feedback.
+- [ ] Add custom key-to-sound mapping overrides.
+- [ ] Bundle more open-source sound packs.
+
 ## License
 MIT
+
