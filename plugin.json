@@ -1,0 +1,23 @@
+{
+  "id": "typingSounds",
+  "name": "Typing Sounds",
+  "description": "Play mechanical keyboard sounds as you type",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Loc Huynh",
+  "icon": "keyboard",
+  "type": "daemon",
+  "capabilities": [
+    "daemon"
+  ],
+  "components": {
+    "daemon": "./TypingSoundsDaemon.qml"
+  },
+  "settings": "./TypingSoundsSettings.qml",
+  "requires_dms": ">=1.5.0",
+  "permissions": [
+    "settings_read",
+    "settings_write",
+    "process"
+  ]
+}
