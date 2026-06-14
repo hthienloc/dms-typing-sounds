@@ -53,6 +53,9 @@ dms ipc typingSounds disable
 - [ ] Add custom key-to-sound mapping overrides.
 - [ ] Bundle more open-source sound packs.
 
+## Credits
+
+- Sound packs are bundled from [Mechvibes](https://github.com/haxiboy/mechvibes).
+
 ## License
 MIT
-

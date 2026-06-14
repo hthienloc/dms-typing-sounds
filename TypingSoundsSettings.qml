@@ -41,10 +41,9 @@ for p in sys.argv[1:]:
 print(json.dumps(res))
 `;
         const localPath = Quickshell.env("HOME") + "/.config/DankMaterialShell/plugins/typingSounds/soundpacks";
-        const builtInPath = Quickshell.env("HOME") + "/Documents/GitHub/mechvibes/src/audio";
         const userPath = Quickshell.env("HOME") + "/.config/dms-typing-sounds/soundpacks";
 
-        Proc.runCommand("typingSounds.scanSoundpacks", ["python3", "-c", script, builtInPath, userPath, localPath], (stdout, exitCode) => {
+        Proc.runCommand("typingSounds.scanSoundpacks", ["python3", "-c", script, userPath, localPath], (stdout, exitCode) => {
             if (exitCode !== 0) return;
             try {
                 const data = JSON.parse(stdout.trim());
