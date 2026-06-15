@@ -48,6 +48,7 @@ dms ipc typingSounds disable
 
 ## Roadmap / TODO
 
+- [ ] **Mouse Interaction**: Support playing sounds for mouse clicks and scrolling.
 - [ ] Add support for custom sound pack directory configuration.
 - [ ] Implement volume/pitch randomization per keystroke for organic feedback.
 - [ ] Add custom key-to-sound mapping overrides.
