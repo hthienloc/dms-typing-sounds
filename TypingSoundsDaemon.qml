@@ -15,6 +15,7 @@ PluginComponent {
     // Settings
     readonly property int volume: root.pluginData.volume ?? 50
     readonly property bool enabled: root.pluginData.enabled ?? true
+    readonly property bool mouseEnabled: root.pluginData.mouseEnabled ?? false
     readonly property string selectedPackPath: root.pluginData.selectedPackPath ?? ""
     readonly property string selectedDevicePath: root.pluginData.selectedDevicePath ?? "all"
 
@@ -27,6 +28,7 @@ PluginComponent {
     property bool isPreparing: false
 
     property bool inputToolMissing: false
+    property bool mouseToolMissing: false
     property bool notInInputGroup: false
     readonly property string requiredTool: selectedDevicePath === "all" ? "libinput" : "evtest"
 
@@ -90,6 +92,8 @@ PluginComponent {
         toolCheck.running = true;
         groupCheck.running = false;
         groupCheck.running = true;
+        mouseToolCheck.running = false;
+        mouseToolCheck.running = true;
     }
 
     Process {
@@ -98,6 +102,15 @@ PluginComponent {
         running: false
         onExited: (exitCode) => {
             root.inputToolMissing = (exitCode !== 0);
+        }
+    }
+
+    Process {
+        id: mouseToolCheck
+        command: ["sh", "-c", "command -v libinput >/dev/null 2>&1"]
+        running: false
+        onExited: (exitCode) => {
+            root.mouseToolMissing = (exitCode !== 0);
         }
     }
 
@@ -216,6 +229,10 @@ PluginComponent {
         }
     }
 
+    function triggerMouseSound() {
+        root.triggerKeySound("30");
+    }
+
     // Input monitoring process
     Process {
         id: inputProc
@@ -234,13 +251,42 @@ PluginComponent {
                 if (data.includes("EV_KEY")) {
                     const keyMatch = data.match(/code\s+(\d+)/);
                     if (keyMatch && data.includes("value 1")) {
-                        root.triggerKeySound(keyMatch[1]);
+                        const code = parseInt(keyMatch[1]);
+                        if (code >= 272 && code <= 287) {
+                            if (root.mouseEnabled) {
+                                root.triggerMouseSound();
+                            }
+                        } else {
+                            root.triggerKeySound(code);
+                        }
                     }
                 } else if (data.includes("KEYBOARD_KEY")) {
                     const keyMatch = data.match(/\((\d+)\)/);
                     if (keyMatch && data.includes("pressed")) {
                         root.triggerKeySound(keyMatch[1]);
                     }
+                } else if (root.mouseEnabled && data.includes("POINTER_BUTTON")) {
+                    if (data.includes("pressed")) {
+                        root.triggerMouseSound();
+                    }
+                }
+            }
+        }
+
+        stderr: StdioCollector {}
+    }
+
+    // Mouse monitoring process for specific device selection
+    Process {
+        id: mouseProc
+        command: ["libinput", "debug-events"]
+        running: root.enabled && root.mouseEnabled && root.selectedDevicePath !== "all" && !root.mouseToolMissing
+
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: data => {
+                if (data.includes("POINTER_BUTTON") && data.includes("pressed")) {
+                    root.triggerMouseSound();
                 }
             }
         }

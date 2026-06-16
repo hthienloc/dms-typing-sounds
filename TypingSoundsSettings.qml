@@ -119,10 +119,11 @@ print(json.dumps(devs))
         SectionTitle {
             text: I18n.tr("General")
             icon: "tune"
-            showReset: enabledSetting.isDirty || volumeSetting.isDirty
+            showReset: enabledSetting.isDirty || volumeSetting.isDirty || mouseEnabledSetting.isDirty
             onResetClicked: {
                 enabledSetting.resetToDefault();
                 volumeSetting.resetToDefault();
+                mouseEnabledSetting.resetToDefault();
             }
         }
 
@@ -145,6 +146,16 @@ print(json.dumps(devs))
             unit: "%"
             leftLabel: "0%"
             rightLabel: "100%"
+        }
+
+        Separator {}
+
+        ToggleSettingPlus {
+            id: mouseEnabledSetting
+            settingKey: "mouseEnabled"
+            label: I18n.tr("Mouse Interaction")
+            description: I18n.tr("Play sounds for mouse clicks")
+            defaultValue: false
         }
     }
 
