@@ -58,6 +58,7 @@ def main():
             cmd.extend([
                 "-ss", f"{offset_ms / 1000.0}",
                 "-t", f"{duration_ms / 1000.0}",
+                "-ar", "44100", "-ac", "1", "-sample_fmt", "s16",
                 out_file
             ])
 

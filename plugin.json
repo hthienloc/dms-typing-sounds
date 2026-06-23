@@ -6,12 +6,14 @@
   "license": "MIT",
   "author": "Loc Huynh",
   "icon": "keyboard",
-  "type": "daemon",
+  "type": "composite",
   "capabilities": [
-    "daemon"
+    "daemon",
+    "control-center"
   ],
   "components": {
-    "daemon": "./TypingSoundsDaemon.qml"
+    "daemon": "./TypingSoundsDaemon.qml",
+    "widget": "./TypingSoundsWidget.qml"
   },
   "settings": "./TypingSoundsSettings.qml",
   "requires_dms": ">=1.5.0",

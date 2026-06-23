@@ -64,7 +64,14 @@ PluginComponent {
         verifyAndLoadPack();
     }
 
+    function cleanup() {
+        inputProc.running = false;
+        mouseProc.running = false;
+        sliceProc.running = false;
+    }
+
     Component.onDestruction: {
+        cleanup();
         if (pluginService.pluginInstances[pluginId] === root) {
             const newInstances = Object.assign({}, pluginService.pluginInstances);
             delete newInstances[pluginId];
