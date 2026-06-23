@@ -111,7 +111,7 @@ print(json.dumps(devs))
     ccWidgetPrimaryText: I18n.tr("Typing Sounds")
     ccWidgetSecondaryText: daemon && daemon.enabled ? I18n.tr("Enabled") : I18n.tr("Disabled")
     ccWidgetIsActive: daemon ? daemon.enabled : false
-    ccDetailHeight: 420
+    ccDetailHeight: 360
 
     onCcWidgetToggled: {
         if (daemon) {
@@ -135,7 +135,49 @@ print(json.dumps(devs))
                 anchors.margins: Theme.spacingM
                 spacing: Theme.spacingM
 
-                Item { width: parent.width; height: 1 }
+                Row {
+                    width: parent.width
+                    spacing: Theme.spacingS
+
+                    StyledText {
+                        id: headerTitle
+                        text: I18n.tr("Typing Sounds")
+                        font.pixelSize: Theme.fontSizeLarge
+                        font.weight: Font.Bold
+                        color: Theme.surfaceText
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Item {
+                        height: 1
+                        width: parent.width - headerTitle.implicitWidth - settingsBtn.implicitWidth - volumeBtn.implicitWidth - parent.spacing * 3
+                    }
+
+                    DankActionButton {
+                        id: settingsBtn
+                        iconName: "settings"
+                        iconColor: Theme.surfaceVariantText
+                        buttonSize: 28
+                        tooltipText: I18n.tr("Settings")
+                        tooltipSide: "bottom"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    DankActionButton {
+                        id: volumeBtn
+                        iconName: root.daemon?.enabled ? "volume_up" : "volume_off"
+                        iconColor: root.daemon?.enabled ? Theme.primary : Theme.surfaceVariantText
+                        buttonSize: 28
+                        tooltipText: root.daemon?.enabled ? I18n.tr("Disable") : I18n.tr("Enable")
+                        tooltipSide: "bottom"
+                        anchors.verticalCenter: parent.verticalCenter
+                        onClicked: {
+                            if (root.daemon) {
+                                root.daemon.saveSetting("enabled", !root.daemon.enabled);
+                            }
+                        }
+                    }
+                }
 
                 DankSliderPlus {
                     width: parent.width
