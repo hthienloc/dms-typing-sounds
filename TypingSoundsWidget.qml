@@ -41,8 +41,8 @@ for p in sys.argv[1:]:
                 res.append((d, dp))
 print(json.dumps(res))
 `;
-        const localPath = Quickshell.env("HOME") + "/.config/DankMaterialShell/plugins/typingSounds/soundpacks";
-        const userPath = Quickshell.env("HOME") + "/.config/dms-typing-sounds/soundpacks";
+        const localPath = Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/soundpacks");
+        const userPath = Paths.expandTilde("~/.config/dms-typing-sounds/soundpacks");
         Proc.runCommand("typingSounds.scanPacks", ["python3", "-c", script, userPath, localPath], (stdout, exitCode) => {
             if (exitCode !== 0) return;
             try {
@@ -64,7 +64,7 @@ include_pattern = "kanata"
 exclude_pattern = ["power button", "video bus", "speaker", "headphone", "lid switch", "touchpad", "extra buttons", "uinput", "server", "hitune", "inphic", "instant", "webcam", "video"]
 devs = []
 if os.path.exists('/proc/bus/input/devices'):
-    with open('/proc/bus/input/devices') as f:
+    with open('/proc/bus/input/devices', encoding='utf-8', errors='replace') as f:
         content = f.read()
     sections = content.strip().split('\\n\\n')
     for section in sections:
@@ -72,7 +72,9 @@ if os.path.exists('/proc/bus/input/devices'):
         handlers = ""
         for line in section.split('\\n'):
             if line.startswith('N: Name='):
-                name = re.search(r'Name="([^"]+)"', line).group(1)
+                m = re.search(r'Name="([^"]+)"', line)
+                if m:
+                    name = m.group(1)
             elif line.startswith('H: Handlers='):
                 handlers = line.split('=')[1]
         if name and handlers:
@@ -143,7 +145,7 @@ print(json.dumps(devs))
                     unit: "%"
                     showValue: true
                     wheelEnabled: false
-                    onSliderValueChanged: {
+                    onSliderValueChanged: (newValue) => {
                         if (root.daemon) {
                             root.daemon.saveSetting("volume", newValue);
                         }
@@ -173,7 +175,7 @@ print(json.dumps(devs))
                             return root._packInit && root.packOptions.length > 0 ? root.packOptions[0].label : "";
                         }
                         options: root.packOptions.map(function(o) { return o.label; })
-                        onValueChanged: {
+                        onValueChanged: (newValue) => {
                             for (var i = 0; i < root.packOptions.length; i++) {
                                 if (root.packOptions[i].label === newValue) {
                                     if (root.daemon) {
@@ -209,7 +211,7 @@ print(json.dumps(devs))
                             return "All Keyboards (Auto)";
                         }
                         options: root.deviceOptions.map(function(o) { return o.label; })
-                        onValueChanged: {
+                        onValueChanged: (newValue) => {
                             for (var i = 0; i < root.deviceOptions.length; i++) {
                                 if (root.deviceOptions[i].label === newValue) {
                                     if (root.daemon) {
