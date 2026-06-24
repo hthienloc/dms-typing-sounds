@@ -206,6 +206,29 @@ PluginComponent {
         }
     }
 
+    function preSlicePack(packPath) {
+        if (!packPath) return;
+        const home = Quickshell.env("HOME");
+        const checkPath = home + "/.cache/dms-typing-sounds";
+        const sliceScript = home + "/.config/DankMaterialShell/plugins/typingSounds/slice_audio.py";
+        const script = `
+import os, json, sys, subprocess
+pack_dir = sys.argv[1]
+cache_base = sys.argv[2]
+try:
+    with open(os.path.join(pack_dir, 'config.json')) as f:
+        pack_id = json.load(f).get('id', 'pack')
+except:
+    pack_id = 'pack'
+cache_dir = os.path.join(cache_base, pack_id)
+marker = os.path.join(cache_dir, '.complete')
+if not os.path.exists(marker):
+    os.makedirs(cache_dir, exist_ok=True)
+    subprocess.run(['python3', sys.argv[3], '--pack-dir', pack_dir, '--cache-dir', cache_dir])
+`;
+        Proc.runCommand("typingSounds.preSlice", ["python3", "-c", script, packPath, checkPath, sliceScript]);
+    }
+
     // Dynamically load sound effects
     Instantiator {
         model: Object.keys(root.currentDefines)

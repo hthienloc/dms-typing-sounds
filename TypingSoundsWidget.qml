@@ -50,6 +50,8 @@ print(json.dumps(res))
                 var options = [];
                 for (var i = 0; i < data.length; i++) {
                     options.push({ label: data[i][0], value: data[i][1] });
+                    if (root.daemon)
+                        root.daemon.preSlicePack(data[i][1]);
                 }
                 root.packOptions = options;
                 root._packInit = true;
@@ -123,61 +125,76 @@ print(json.dumps(devs))
     ccDetailContent: Component {
         Rectangle {
             id: detailRoot
-            implicitHeight: detailColumn.implicitHeight + Theme.spacingM * 2
             radius: Theme.cornerRadius
-            color: Theme.surfaceContainerHigh
-            border.width: 0
+            color: Theme.nestedSurface
+            border.color: Theme.outlineMedium
+            border.width: Theme.layerOutlineWidth
+
+            implicitHeight: headerRow.height + detailColumn.implicitHeight + Theme.spacingM * 2
+            height: implicitHeight
+
+            Row {
+                id: headerRow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.leftMargin: Theme.spacingM
+                anchors.rightMargin: Theme.spacingM
+                anchors.topMargin: Theme.spacingS
+                height: Math.max(headerLabel.implicitHeight, headerControls.implicitHeight) + Theme.spacingS * 2
+
+                StyledText {
+                    id: headerLabel
+                    text: I18n.tr("Typing Sounds")
+                    font.pixelSize: Theme.fontSizeLarge
+                    font.weight: Font.Medium
+                    color: Theme.surfaceText
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Item {
+                    height: 1
+                    width: parent.width - headerLabel.width - headerControls.width
+                }
+
+                Row {
+                    id: headerControls
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.spacingS
+
+                    DankActionButton {
+                        iconName: "settings"
+                        buttonSize: 28
+                        iconSize: 16
+                        iconColor: Theme.surfaceVariantText
+                        tooltipText: I18n.tr("Settings")
+                        tooltipSide: "bottom"
+                        onClicked: PopoutService.openSettingsWithTab("plugins")
+                    }
+
+                    DankActionButton {
+                        iconName: root.daemon?.enabled ? "volume_up" : "volume_off"
+                        iconColor: root.daemon?.enabled ? Theme.primary : Theme.surfaceVariantText
+                        buttonSize: 28
+                        iconSize: 16
+                        tooltipText: root.daemon?.enabled ? I18n.tr("Disable") : I18n.tr("Enable")
+                        tooltipSide: "bottom"
+                        onClicked: {
+                            if (root.daemon)
+                                root.daemon.saveSetting("enabled", !root.daemon.enabled);
+                        }
+                    }
+                }
+            }
 
             Column {
                 id: detailColumn
                 anchors.left: parent.left
                 anchors.right: parent.right
+                anchors.top: headerRow.bottom
                 anchors.margins: Theme.spacingM
-                spacing: Theme.spacingM
-
-                Row {
-                    width: parent.width
-                    spacing: Theme.spacingS
-
-                    StyledText {
-                        id: headerTitle
-                        text: I18n.tr("Typing Sounds")
-                        font.pixelSize: Theme.fontSizeLarge
-                        font.weight: Font.Bold
-                        color: Theme.surfaceText
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Item {
-                        height: 1
-                        width: parent.width - headerTitle.implicitWidth - settingsBtn.implicitWidth - volumeBtn.implicitWidth - parent.spacing * 3
-                    }
-
-                    DankActionButton {
-                        id: settingsBtn
-                        iconName: "settings"
-                        iconColor: Theme.surfaceVariantText
-                        buttonSize: 28
-                        tooltipText: I18n.tr("Settings")
-                        tooltipSide: "bottom"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    DankActionButton {
-                        id: volumeBtn
-                        iconName: root.daemon?.enabled ? "volume_up" : "volume_off"
-                        iconColor: root.daemon?.enabled ? Theme.primary : Theme.surfaceVariantText
-                        buttonSize: 28
-                        tooltipText: root.daemon?.enabled ? I18n.tr("Disable") : I18n.tr("Enable")
-                        tooltipSide: "bottom"
-                        anchors.verticalCenter: parent.verticalCenter
-                        onClicked: {
-                            if (root.daemon) {
-                                root.daemon.saveSetting("enabled", !root.daemon.enabled);
-                            }
-                        }
-                    }
-                }
+                anchors.topMargin: Theme.spacingS
+                spacing: Theme.spacingS
 
                 DankSliderPlus {
                     width: parent.width
@@ -188,9 +205,8 @@ print(json.dumps(devs))
                     showValue: true
                     wheelEnabled: false
                     onSliderValueChanged: (newValue) => {
-                        if (root.daemon) {
+                        if (root.daemon)
                             root.daemon.saveSetting("volume", newValue);
-                        }
                     }
                 }
 
@@ -220,9 +236,8 @@ print(json.dumps(devs))
                         onValueChanged: (newValue) => {
                             for (var i = 0; i < root.packOptions.length; i++) {
                                 if (root.packOptions[i].label === newValue) {
-                                    if (root.daemon) {
+                                    if (root.daemon)
                                         root.daemon.saveSetting("selectedPackPath", root.packOptions[i].value);
-                                    }
                                     break;
                                 }
                             }
@@ -256,9 +271,8 @@ print(json.dumps(devs))
                         onValueChanged: (newValue) => {
                             for (var i = 0; i < root.deviceOptions.length; i++) {
                                 if (root.deviceOptions[i].label === newValue) {
-                                    if (root.daemon) {
+                                    if (root.daemon)
                                         root.daemon.saveSetting("selectedDevicePath", root.deviceOptions[i].value);
-                                    }
                                     break;
                                 }
                             }
@@ -271,9 +285,8 @@ print(json.dumps(devs))
                     text: I18n.tr("Mouse Clicks")
                     checked: root.daemon ? root.daemon.mouseEnabled : false
                     onToggled: {
-                        if (root.daemon) {
+                        if (root.daemon)
                             root.daemon.saveSetting("mouseEnabled", checked);
-                        }
                     }
                 }
             }
