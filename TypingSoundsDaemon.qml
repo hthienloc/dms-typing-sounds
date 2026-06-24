@@ -24,8 +24,6 @@ PluginComponent {
     property var _pendingDefines: ({})
     property string currentPackId: ""
     property string cachePath: ""
-    property string sourceDir: ""
-    property string keyDefineType: "single"
     property var soundMap: ({})
     property bool isPreparing: false
 
@@ -141,20 +139,12 @@ PluginComponent {
                 if (!config) return;
                 
                 const packId = config.id || "default_pack";
-                const isMulti = (config.key_define_type === "multi");
-                const homeCache = Quickshell.env("HOME") + "/.cache/dms-typing-sounds/" + packId;
+                const homeCache = Paths.expandTilde("~/.cache/dms-typing-sounds") + "/" + packId;
                 
                 root.currentPackId = packId;
-                root.keyDefineType = config.key_define_type || "single";
                 root.cachePath = homeCache;
-                root.sourceDir = isMulti ? root.selectedPackPath : homeCache;
                 root._pendingDefines = config.defines || {};
-                
-                if (isMulti) {
-                    root.currentDefines = root._pendingDefines;
-                } else {
-                    cacheMarkerReader.path = homeCache + "/.complete";
-                }
+                cacheMarkerReader.path = homeCache + "/.complete";
             } catch(e) {
                 console.warn("[TypingSounds] Failed to parse config.json:", e);
             }
@@ -176,7 +166,7 @@ PluginComponent {
             root.isPreparing = true;
             sliceProc.command = [
                 "python3",
-                Quickshell.env("HOME") + "/.config/DankMaterialShell/plugins/typingSounds/slice_audio.py",
+                Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/slice_audio.py"),
                 "--pack-dir", root.selectedPackPath,
                 "--cache-dir", root.cachePath
             ];
@@ -216,36 +206,41 @@ PluginComponent {
 
     function preSlicePack(packPath) {
         if (!packPath) return;
-        const home = Quickshell.env("HOME");
-        const checkPath = home + "/.cache/dms-typing-sounds";
-        const sliceScript = home + "/.config/DankMaterialShell/plugins/typingSounds/slice_audio.py";
+        if (preSliceQueue.indexOf(packPath) !== -1) return;
+        preSliceQueue = preSliceQueue.concat([packPath]);
         const script = `
 import os, json, sys, subprocess
 pack_dir = sys.argv[1]
 cache_base = sys.argv[2]
+slice_script = sys.argv[3]
 try:
     with open(os.path.join(pack_dir, 'config.json')) as f:
         cfg = json.load(f)
         pack_id = cfg.get('id', 'pack')
-        if cfg.get('key_define_type') == 'multi':
-            sys.exit(0)
 except:
     sys.exit(0)
 cache_dir = os.path.join(cache_base, pack_id)
 marker = os.path.join(cache_dir, '.complete')
 if not os.path.exists(marker):
     os.makedirs(cache_dir, exist_ok=True)
-    subprocess.run(['python3', sys.argv[3], '--pack-dir', pack_dir, '--cache-dir', cache_dir])
+    subprocess.run(['python3', slice_script, '--pack-dir', pack_dir, '--cache-dir', cache_dir])
 `;
-        Proc.runCommand("typingSounds.preSlice", ["python3", "-c", script, packPath, checkPath, sliceScript]);
+        Proc.runCommand("typingSounds.preSlice", [
+            "python3", "-c", script,
+            packPath,
+            Paths.expandTilde("~/.cache/dms-typing-sounds"),
+            Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/slice_audio.py")
+        ]);
     }
+
+    property var preSliceQueue: []
 
     // Dynamically load sound effects
     Instantiator {
         model: Object.keys(root.currentDefines)
         delegate: SoundEffectWrapper {
             keycode: modelData
-            sourcePath: "file://" + root.sourceDir + "/" + modelData + ".wav"
+            sourcePath: "file://" + root.cachePath + "/" + modelData + ".wav"
             volumeValue: root.volume / 100.0
 
             Component.onCompleted: {

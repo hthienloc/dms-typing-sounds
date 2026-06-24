@@ -130,17 +130,13 @@ print(json.dumps(devs))
             border.color: Theme.outlineMedium
             border.width: Theme.layerOutlineWidth
 
-            implicitHeight: headerRow.height + detailColumn.implicitHeight + Theme.spacingM * 2
-            height: implicitHeight
+            implicitHeight: childrenRect.height
 
-            Row {
+            Item {
                 id: headerRow
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.leftMargin: Theme.spacingM
-                anchors.rightMargin: Theme.spacingM
-                anchors.topMargin: Theme.spacingS
                 height: Math.max(headerLabel.implicitHeight, headerControls.implicitHeight) + Theme.spacingS * 2
 
                 StyledText {
@@ -149,16 +145,15 @@ print(json.dumps(devs))
                     font.pixelSize: Theme.fontSizeLarge
                     font.weight: Font.Medium
                     color: Theme.surfaceText
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.spacingM
                     anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Item {
-                    height: 1
-                    width: parent.width - headerLabel.width - headerControls.width
                 }
 
                 Row {
                     id: headerControls
+                    anchors.right: parent.right
+                    anchors.rightMargin: Theme.spacingM
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Theme.spacingS
 
