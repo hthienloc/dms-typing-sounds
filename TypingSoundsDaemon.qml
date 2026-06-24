@@ -68,6 +68,8 @@ PluginComponent {
         inputProc.running = false;
         mouseProc.running = false;
         sliceProc.running = false;
+        currentDefines = {};
+        soundMap = {};
     }
 
     Component.onDestruction: {
