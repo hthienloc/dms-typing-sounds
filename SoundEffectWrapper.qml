@@ -15,6 +15,10 @@ Item {
         id: player
     }
 
+    Component.onDestruction: {
+        player.stop();
+    }
+
     function play() {
         player.play();
     }
