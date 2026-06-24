@@ -24,6 +24,8 @@ PluginComponent {
     property var _pendingDefines: ({})
     property string currentPackId: ""
     property string cachePath: ""
+    property string sourceDir: ""
+    property string keyDefineType: "single"
     property var soundMap: ({})
     property bool isPreparing: false
 
@@ -139,14 +141,20 @@ PluginComponent {
                 if (!config) return;
                 
                 const packId = config.id || "default_pack";
+                const isMulti = (config.key_define_type === "multi");
                 const homeCache = Quickshell.env("HOME") + "/.cache/dms-typing-sounds/" + packId;
                 
                 root.currentPackId = packId;
+                root.keyDefineType = config.key_define_type || "single";
                 root.cachePath = homeCache;
+                root.sourceDir = isMulti ? root.selectedPackPath : homeCache;
                 root._pendingDefines = config.defines || {};
                 
-                // Check if the cache is complete
-                cacheMarkerReader.path = homeCache + "/.complete";
+                if (isMulti) {
+                    root.currentDefines = root._pendingDefines;
+                } else {
+                    cacheMarkerReader.path = homeCache + "/.complete";
+                }
             } catch(e) {
                 console.warn("[TypingSounds] Failed to parse config.json:", e);
             }
@@ -217,9 +225,12 @@ pack_dir = sys.argv[1]
 cache_base = sys.argv[2]
 try:
     with open(os.path.join(pack_dir, 'config.json')) as f:
-        pack_id = json.load(f).get('id', 'pack')
+        cfg = json.load(f)
+        pack_id = cfg.get('id', 'pack')
+        if cfg.get('key_define_type') == 'multi':
+            sys.exit(0)
 except:
-    pack_id = 'pack'
+    sys.exit(0)
 cache_dir = os.path.join(cache_base, pack_id)
 marker = os.path.join(cache_dir, '.complete')
 if not os.path.exists(marker):
@@ -234,7 +245,7 @@ if not os.path.exists(marker):
         model: Object.keys(root.currentDefines)
         delegate: SoundEffectWrapper {
             keycode: modelData
-            sourcePath: "file://" + root.cachePath + "/" + modelData + ".wav"
+            sourcePath: "file://" + root.sourceDir + "/" + modelData + ".wav"
             volumeValue: root.volume / 100.0
 
             Component.onCompleted: {
