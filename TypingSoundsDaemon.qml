@@ -17,7 +17,7 @@ PluginComponent {
     readonly property bool enabled: root.pluginData.enabled ?? true
     readonly property bool mouseEnabled: root.pluginData.mouseEnabled ?? false
     readonly property string defaultPackPath: Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/soundpacks/nk-cream")
-    readonly property string selectedPackPath: root.pluginData.selectedPackPath ?? root.defaultPackPath
+    readonly property string selectedPackPath: root.pluginData.selectedPackPath || root.defaultPackPath
     readonly property string selectedDevicePath: root.pluginData.selectedDevicePath ?? "all"
 
     // Runtime state
