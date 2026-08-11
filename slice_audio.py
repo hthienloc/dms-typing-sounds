@@ -4,11 +4,37 @@ import sys
 import json
 import argparse
 import subprocess
+import shutil
+
+
+CACHE_FORMAT_PATH = os.path.join(os.path.dirname(__file__), "cache_format.json")
+with open(CACHE_FORMAT_PATH, "r", encoding="utf-8") as f:
+    CACHE_FORMAT_VERSION = str(json.load(f)["version"])
+
+DEFAULT_PACK_GAIN = 2.0
+
+
+def transcode_to_qsoundeffect_wav(source_path, destination_path, gain):
+    """Write a conservative WAV format supported by Qt's QSoundEffect."""
+    cmd = [
+        "ffmpeg", "-y", "-i", source_path,
+        "-map", "0:a:0", "-ar", "44100", "-ac", "1",
+        "-c:a", "pcm_s16le",
+    ]
+    if gain != 1.0:
+        cmd.extend(["-af", f"volume={gain},alimiter=limit=1.0"])
+    cmd.append(destination_path)
+    result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        error = result.stderr.decode("utf-8", errors="ignore").strip()
+        raise RuntimeError(f"ffmpeg failed for {source_path}: {error}")
 
 def main():
     parser = argparse.ArgumentParser(description="Slice Mechvibes sound pack into individual key audio files.")
     parser.add_argument("--pack-dir", required=True, help="Absolute path to the sound pack directory")
     parser.add_argument("--cache-dir", required=True, help="Absolute path to the cache output directory")
+    parser.add_argument("--pack-gain", type=float, default=DEFAULT_PACK_GAIN,
+                        help="Linear gain before limiting (default: 2.0)")
     args = parser.parse_args()
 
     pack_dir = os.path.abspath(args.pack_dir)
@@ -58,9 +84,12 @@ def main():
             cmd.extend([
                 "-ss", f"{offset_ms / 1000.0}",
                 "-t", f"{duration_ms / 1000.0}",
-                "-ar", "44100", "-ac", "1", "-sample_fmt", "s16",
-                out_file
+                "-map", "0:a:0", "-ar", "44100", "-ac", "1",
+                "-c:a", "pcm_s16le",
             ])
+            if args.pack_gain != 1.0:
+                cmd.extend(["-af", f"volume={args.pack_gain},alimiter=limit=1.0"])
+            cmd.append(out_file)
 
         print(f"Slicing {sound_path} to {cache_dir}...")
         res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -70,6 +99,7 @@ def main():
 
     elif key_define_type == "multi":
         print(f"Copying/converting multi-file sound pack from {pack_dir}...")
+        normalized_sources = {}
         for keycode, file_name in defines.items():
             if not file_name:
                 continue
@@ -78,25 +108,26 @@ def main():
                 continue
             
             dest_path = os.path.join(cache_dir, f"{keycode}.wav")
-            if os.path.exists(dest_path):
-                os.remove(dest_path)
-            
-            _, ext = os.path.splitext(file_name)
-            if ext.lower() == ".wav":
-                try:
-                    os.symlink(src_path, dest_path)
-                except Exception:
-                    import shutil
-                    shutil.copy2(src_path, dest_path)
-            else:
-                # Transcode to wav using ffmpeg
-                cmd = ["ffmpeg", "-y", "-i", src_path, dest_path]
-                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Do not symlink/copy source WAVs: QSoundEffect accepts only a
+            # conservative subset of WAV variants. Normalize every file.
+            try:
+                # Old caches used symlinks to the source pack. Remove the
+                # link itself before ffmpeg writes, never follow it.
+                if os.path.lexists(dest_path):
+                    os.remove(dest_path)
+                if src_path in normalized_sources:
+                    shutil.copyfile(normalized_sources[src_path], dest_path)
+                else:
+                    transcode_to_qsoundeffect_wav(src_path, dest_path, args.pack_gain)
+                    normalized_sources[src_path] = dest_path
+            except RuntimeError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
 
     # Create marker file
     try:
         with open(os.path.join(cache_dir, ".complete"), "w", encoding="utf-8") as f:
-            f.write("1")
+            f.write(CACHE_FORMAT_VERSION)
     except Exception as e:
         print(f"Warning: Could not write marker file: {e}", file=sys.stderr)
 
