@@ -193,9 +193,9 @@ print(json.dumps(devs))
 
                 DankSliderPlus {
                     width: parent.width
-                    value: root.daemon ? root.daemon.volume : 50
+                    value: root.daemon ? root.daemon.volume : 100
                     minimum: 0
-                    maximum: 100
+                    maximum: 200
                     unit: "%"
                     showValue: true
                     wheelEnabled: false
@@ -279,7 +279,7 @@ print(json.dumps(devs))
                     width: parent.width
                     text: I18n.tr("Mouse Clicks")
                     checked: root.daemon ? root.daemon.mouseEnabled : false
-                    onToggled: {
+                    onToggled: (checked) => {
                         if (root.daemon)
                             root.daemon.saveSetting("mouseEnabled", checked);
                     }

@@ -140,12 +140,12 @@ print(json.dumps(devs))
             id: volumeSetting
             settingKey: "volume"
             label: I18n.tr("Sound Volume")
-            defaultValue: 50
+            defaultValue: 100
             minimum: 0
-            maximum: 100
+            maximum: 200
             unit: "%"
             leftLabel: "0%"
-            rightLabel: "100%"
+            rightLabel: "200%"
         }
 
         Separator {}

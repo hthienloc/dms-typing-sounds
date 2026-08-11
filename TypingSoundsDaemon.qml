@@ -13,12 +13,13 @@ PluginComponent {
     pluginService: PluginService
 
     // Settings
-    readonly property int volume: root.pluginData.volume ?? 50
+    readonly property int volume: root.pluginData.volume ?? 100
     readonly property bool enabled: root.pluginData.enabled ?? true
     readonly property bool mouseEnabled: root.pluginData.mouseEnabled ?? false
     readonly property string defaultPackPath: Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/soundpacks/nk-cream")
     readonly property string selectedPackPath: root.pluginData.selectedPackPath || root.defaultPackPath
     readonly property string selectedDevicePath: root.pluginData.selectedDevicePath ?? "all"
+    readonly property string cacheFormatVersion: "3"
 
     // Runtime state
     property var currentDefines: ({})
@@ -32,6 +33,19 @@ PluginComponent {
     property bool mouseToolMissing: false
     property bool notInInputGroup: false
     readonly property string requiredTool: selectedDevicePath === "all" ? "libinput" : "evtest"
+
+    function usableDefines(defines) {
+        const result = {};
+        for (const keycode of Object.keys(defines || {})) {
+            const define = defines[keycode];
+            // Mechvibes uses null entries for unsupported keycodes. Do not
+            // instantiate QSoundEffect for those entries.
+            if (define !== null && define !== undefined && define !== "") {
+                result[keycode] = define;
+            }
+        }
+        return result;
+    }
 
     IpcHandler {
         target: "typingSounds"
@@ -161,8 +175,21 @@ PluginComponent {
         id: cacheMarkerReader
         printErrors: false
         onLoaded: {
-            console.log("[TypingSounds] Sound pack cache is complete for:", root.currentPackId);
-            root.currentDefines = root._pendingDefines;
+            if (text().trim() === root.cacheFormatVersion) {
+                console.log("[TypingSounds] Sound pack cache is complete for:", root.currentPackId);
+                root.currentDefines = root.usableDefines(root._pendingDefines);
+                root.isPreparing = false;
+            } else {
+                console.log("[TypingSounds] Sound pack cache format is outdated. Rebuilding:", root.currentPackId);
+                sliceProc.command = [
+                    "python3",
+                    Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/slice_audio.py"),
+                    "--pack-dir", root.selectedPackPath,
+                    "--cache-dir", root.cachePath
+                ];
+                root.isPreparing = true;
+                sliceProc.running = true;
+            }
         }
         onLoadFailed: {
             console.log("[TypingSounds] Sound pack cache is incomplete. Slicing:", root.currentPackId);
@@ -178,29 +205,41 @@ PluginComponent {
     }
 
     function verifyAndLoadPack() {
+        // Tear down effects from the previous pack before changing the cache
+        // path. Otherwise their bound sources briefly point at the new,
+        // incomplete cache and QSoundEffect logs decode warnings.
+        currentDefines = {};
+        soundMap = {};
+        isPreparing = true;
+
         if (!selectedPackPath) {
-            currentDefines = {};
             currentPackId = "";
             cachePath = "";
+            isPreparing = false;
             return;
         }
 
         if (sliceProc.running) {
             sliceProc.running = false;
         }
-        root.isPreparing = false;
-
         configFileReader.path = selectedPackPath + "/config.json";
     }
 
     Process {
         id: sliceProc
         running: false
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (text.trim()) {
+                    console.error("[TypingSounds] Slicing details:", text.trim());
+                }
+            }
+        }
         onExited: (exitCode) => {
             root.isPreparing = false;
             if (exitCode === 0) {
                 console.log("[TypingSounds] Sound pack sliced successfully.");
-                root.currentDefines = root._pendingDefines;
+                root.currentDefines = root.usableDefines(root._pendingDefines);
             } else {
                 console.error("[TypingSounds] Slicing failed with exit code:", exitCode);
             }
@@ -224,7 +263,11 @@ except:
     sys.exit(0)
 cache_dir = os.path.join(cache_base, pack_id)
 marker = os.path.join(cache_dir, '.complete')
-if not os.path.exists(marker):
+try:
+    cache_is_valid = open(marker).read().strip() == '3'
+except OSError:
+    cache_is_valid = False
+if not cache_is_valid:
     os.makedirs(cache_dir, exist_ok=True)
     subprocess.run(['python3', slice_script, '--pack-dir', pack_dir, '--cache-dir', cache_dir])
 `;
@@ -244,7 +287,7 @@ if not os.path.exists(marker):
         delegate: SoundEffectWrapper {
             keycode: modelData
             sourcePath: "file://" + root.cachePath + "/" + modelData + ".wav"
-            volumeValue: root.volume / 100.0
+            volumeValue: Math.min(root.volume / 200.0, 1.0)
 
             Component.onCompleted: {
                 root.soundMap[keycode] = this;
