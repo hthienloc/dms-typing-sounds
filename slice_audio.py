@@ -7,16 +7,23 @@ import subprocess
 import shutil
 
 
-CACHE_FORMAT_VERSION = "3"
+CACHE_FORMAT_PATH = os.path.join(os.path.dirname(__file__), "cache_format.json")
+with open(CACHE_FORMAT_PATH, "r", encoding="utf-8") as f:
+    CACHE_FORMAT_VERSION = str(json.load(f)["version"])
+
+DEFAULT_PACK_GAIN = 2.0
 
 
-def transcode_to_qsoundeffect_wav(source_path, destination_path):
+def transcode_to_qsoundeffect_wav(source_path, destination_path, gain):
     """Write a conservative WAV format supported by Qt's QSoundEffect."""
     cmd = [
         "ffmpeg", "-y", "-i", source_path,
         "-map", "0:a:0", "-ar", "44100", "-ac", "1",
-        "-c:a", "pcm_s16le", "-af", "volume=2.0", destination_path,
+        "-c:a", "pcm_s16le",
     ]
+    if gain != 1.0:
+        cmd.extend(["-af", f"volume={gain},alimiter=limit=1.0"])
+    cmd.append(destination_path)
     result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     if result.returncode != 0:
         error = result.stderr.decode("utf-8", errors="ignore").strip()
@@ -26,6 +33,8 @@ def main():
     parser = argparse.ArgumentParser(description="Slice Mechvibes sound pack into individual key audio files.")
     parser.add_argument("--pack-dir", required=True, help="Absolute path to the sound pack directory")
     parser.add_argument("--cache-dir", required=True, help="Absolute path to the cache output directory")
+    parser.add_argument("--pack-gain", type=float, default=DEFAULT_PACK_GAIN,
+                        help="Linear gain before limiting (default: 2.0)")
     args = parser.parse_args()
 
     pack_dir = os.path.abspath(args.pack_dir)
@@ -76,9 +85,11 @@ def main():
                 "-ss", f"{offset_ms / 1000.0}",
                 "-t", f"{duration_ms / 1000.0}",
                 "-map", "0:a:0", "-ar", "44100", "-ac", "1",
-                "-c:a", "pcm_s16le", "-af", "volume=2.0",
-                out_file
+                "-c:a", "pcm_s16le",
             ])
+            if args.pack_gain != 1.0:
+                cmd.extend(["-af", f"volume={args.pack_gain},alimiter=limit=1.0"])
+            cmd.append(out_file)
 
         print(f"Slicing {sound_path} to {cache_dir}...")
         res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -107,7 +118,7 @@ def main():
                 if src_path in normalized_sources:
                     shutil.copyfile(normalized_sources[src_path], dest_path)
                 else:
-                    transcode_to_qsoundeffect_wav(src_path, dest_path)
+                    transcode_to_qsoundeffect_wav(src_path, dest_path, args.pack_gain)
                     normalized_sources[src_path] = dest_path
             except RuntimeError as e:
                 print(f"Error: {e}", file=sys.stderr)

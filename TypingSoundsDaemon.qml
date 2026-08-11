@@ -19,7 +19,8 @@ PluginComponent {
     readonly property string defaultPackPath: Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/soundpacks/nk-cream")
     readonly property string selectedPackPath: root.pluginData.selectedPackPath || root.defaultPackPath
     readonly property string selectedDevicePath: root.pluginData.selectedDevicePath ?? "all"
-    readonly property string cacheFormatVersion: "3"
+    property string cacheFormatVersion: ""
+    property bool cacheFormatReady: false
 
     // Runtime state
     property var currentDefines: ({})
@@ -76,7 +77,7 @@ PluginComponent {
         }
         
         checkTools();
-        verifyAndLoadPack();
+        cacheVersionReader.path = Paths.expandTilde("~/.config/DankMaterialShell/plugins/typingSounds/cache_format.json");
     }
 
     function cleanup() {
@@ -148,6 +149,21 @@ PluginComponent {
     }
 
     FileView {
+        id: cacheVersionReader
+        printErrors: false
+        onLoaded: {
+            try {
+                root.cacheFormatVersion = JSON.parse(text()).version.toString();
+                root.cacheFormatReady = true;
+                root.verifyAndLoadPack();
+            } catch(e) {
+                console.error("[TypingSounds] Failed to read cache format version:", e);
+            }
+        }
+        onLoadFailed: console.error("[TypingSounds] Missing cache_format.json:", path)
+    }
+
+    FileView {
         id: configFileReader
         printErrors: false
         onLoaded: {
@@ -212,6 +228,8 @@ PluginComponent {
         soundMap = {};
         isPreparing = true;
 
+        if (!cacheFormatReady) return;
+
         if (!selectedPackPath) {
             currentPackId = "";
             cachePath = "";
@@ -255,6 +273,7 @@ import os, json, sys, subprocess
 pack_dir = sys.argv[1]
 cache_base = sys.argv[2]
 slice_script = sys.argv[3]
+sys.path.insert(0, os.path.dirname(slice_script))
 try:
     with open(os.path.join(pack_dir, 'config.json')) as f:
         cfg = json.load(f)
@@ -264,7 +283,8 @@ except:
 cache_dir = os.path.join(cache_base, pack_id)
 marker = os.path.join(cache_dir, '.complete')
 try:
-    cache_is_valid = open(marker).read().strip() == '3'
+    from slice_audio import CACHE_FORMAT_VERSION
+    cache_is_valid = open(marker).read().strip() == CACHE_FORMAT_VERSION
 except OSError:
     cache_is_valid = False
 if not cache_is_valid:
